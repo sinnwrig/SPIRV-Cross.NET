@@ -1,0 +1,3 @@
+[submodule "Native/SPIRV-Cross-zig"]
+	path = Native/SPIRV-Cross-zig
+	url = https://github.com/sinnwrig/SPIRV-Cross-zig

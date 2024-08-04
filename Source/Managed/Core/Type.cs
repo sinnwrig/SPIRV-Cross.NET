@@ -5,22 +5,30 @@ namespace SPIRVCross.NET;
 
 using static Native.Type;
 
-public sealed unsafe class Type : ChildObject<Reflector>
+public sealed unsafe class Type : ContextChild
 {
-    internal Native.Type* type;
+    private Native.Type* _type;
+    internal Native.Type* type
+    {
+        get
+        {
+            Validate();
+            return _type;
+        }
+    }
 
-    internal Type(Reflector reflector, Native.Type* type) : base(reflector)
+    internal Type(Context context, Native.Type* type) : base(context)
     {   
-        this.type = type;
+        this._type = type;
     }
 
     /// <summary>
-    /// Maps to SPIRType::self
+    /// Maps to SPIRType::self. This ID can be used to get the underlying type of an object without decorations
     /// </summary>    
-    public TypeID BaseTypeID
+    public TypeID BaseType
         => spvc_type_get_base_type_id(type);
 
-    public BaseType BaseType
+    public BaseValueType BaseValueType
         => spvc_type_get_basetype(type);
 
     public uint MemberCount
@@ -70,21 +78,6 @@ public sealed unsafe class Type : ChildObject<Reflector>
     public ID GetArrayDimension(uint dimension)
         => spvc_type_get_array_dimension(type, dimension);
 
-    
-    private Type[] _members;
-    public Type[] Members 
-    {
-        get 
-        {
-            if (_members == null)
-            {
-                _members = new Type[(int)spvc_type_get_num_member_types(type)];
-
-                for (uint i = 0; i < _members.Length; i++)
-                    _members[i] = parent.GetTypeHandle(spvc_type_get_member_type(type, i));
-            }
-
-            return _members;
-        }
-    }
+    public TypeID GetMemberType(uint index)
+        => spvc_type_get_member_type(type, index);
 }

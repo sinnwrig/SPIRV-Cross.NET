@@ -18,11 +18,11 @@ public static partial class HLSLCompiler
 
     [LibraryImport(LibName)]
     [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]
-    public static unsafe partial Result spvc_compiler_hlsl_set_root_constants_layout(Compiler* compiler, [In] RootConstants[] constant_info, nuint count);
+    public static unsafe partial Result spvc_compiler_hlsl_set_root_constants_layout(Compiler* compiler, RootConstants* constant_info, nuint count);
 
     [LibraryImport(LibName, StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]
-    public static unsafe partial Result spvc_compiler_hlsl_add_vertex_attribute_remap(Compiler* compiler, [In] VertexAttributeRemap[] remap, nuint remaps);
+    public static unsafe partial Result spvc_compiler_hlsl_add_vertex_attribute_remap(Compiler* compiler, VertexAttributeRemap* remap, nuint remaps);
 
     [LibraryImport(LibName)]
     [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]
@@ -39,12 +39,4 @@ public static partial class HLSLCompiler
     [LibraryImport(LibName)]
     [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]
     public static unsafe partial CBool spvc_compiler_hlsl_is_resource_used(Compiler* compiler, ExecutionModel model, uint set, uint binding);
-
-    [LibraryImport(LibName)]
-    [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]
-    public static unsafe partial CBool spvc_compiler_buffer_is_hlsl_counter_buffer(Compiler* compiler, VariableID id);
-
-    [LibraryImport(LibName)]
-    [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]
-    public static unsafe partial CBool spvc_compiler_buffer_get_hlsl_counter_buffer(Compiler* compiler, VariableID id, out VariableID counter_id);
 }

@@ -5,37 +5,56 @@ namespace SPIRVCross.NET;
 
 using static Native.Compiler;
 
-public unsafe class Reflector : ChildObject<Context>
+/// <summary>
+/// Wraps SPIRV-Cross reflection functionality provided by <see cref="Native.Compiler"/> into a type-safe and memory-safe object.
+/// </summary>
+/// <remarks>
+/// An instance of this class can be obtained through <see cref="Context.CreateReflector(ParsedIR)"/>
+/// </remarks>
+public unsafe class Reflector : ContextChild
 {
-    internal static readonly MissingParentException MissingContext = new("Parent context is missing or has been disposed");
-    internal static readonly InvalidParentException MismatchingCompiler = new("Object compiler does not match currently used compiler");
+    private Native.Compiler* _compiler;
+    internal Native.Compiler* compiler
+    {
+        get 
+        {
+            Validate();
+            return _compiler;
+        }
+    }
 
+    internal Reflector(Context context, Native.Compiler* compiler) : base(context)
+    {
+        this._compiler = compiler;
+    }
+
+    // CreateConstant and CreateType ensure that no duplicate managed objects are made for existing IDs.
+    // SPIRV-Cross internally keeps a lookup table of constant/type object instances, 
+    // but in C#-land we have to make our own lookup to ensure we aren't creating a bunch of managed objects for a single ID.
     private Dictionary<ConstantID, Constant> _constantMap = new();
 
-    internal Constant CreateConstant(Reflector reflector, ConstantID id, Native.Constant* constant)
+    internal Constant CreateConstant(Context context, ConstantID id, Native.Constant* constant)
     {
-        if (!_constantMap.ContainsKey(id))
-            _constantMap.Add(id, new Constant(reflector, constant));
-        
-        return _constantMap[id];
+        if (!_constantMap.TryGetValue(id, out Constant? value))
+        {
+            value = new Constant(context, constant);
+            _constantMap.Add(id, value);
+        }
+
+        return value;
     }
 
     private Dictionary<TypeID, Type> _typeMap = new();
 
-    internal Type CreateType(Reflector reflector, TypeID id, Native.Type* type)
+    internal Type CreateType(Context context, TypeID id, Native.Type* type)
     {
-        if (!_typeMap.ContainsKey(id))
-            _typeMap.Add(id, new Type(reflector, type));
-        
-        return _typeMap[id];
-    }
+        if (!_typeMap.TryGetValue(id, out Type? value))
+        {
+            value = new Type(context, type);
+            _typeMap.Add(id, value);
+        }
 
-
-    internal Native.Compiler* compiler;
-
-    internal Reflector(Context context, Native.Compiler* compiler) : base(context)
-    {
-        this.compiler = compiler;
+        return value;
     }
 
     /// <summary>
@@ -47,38 +66,26 @@ public unsafe class Reflector : ChildObject<Context>
 	/// which can be queried to determine which fields in the unions should be poked at.
     /// </summary>
     public uint GetCurrentIDBound()
-    { 
-        Validate(MissingContext); 
-        return spvc_compiler_get_current_id_bound(compiler); 
-    }
+        => spvc_compiler_get_current_id_bound(compiler); 
 
     /// <summary>
     /// Adds an extension which is required to run this shader, e.g.
 	/// require_extension("GL_KHR_my_extension");
     /// </summary>
-    public void RequireExtension(string extension)
-    {
-        Validate(MissingContext);
-        parent.Throw(spvc_compiler_require_extension(compiler, extension));
-    }
+    public void RequireExtension(string extension) 
+        => context.Throw(spvc_compiler_require_extension(compiler, extension));
 
     /// <summary>
     /// Gets the number of extensions in the internal SPIR-V extension list 
     /// </summary>
-    public nuint GetNumRequiredExtensions()
-    {
-        Validate(MissingContext);
-        return spvc_compiler_get_num_required_extensions(compiler);
-    }
+    public nuint GetNumRequiredExtensions() 
+        => spvc_compiler_get_num_required_extensions(compiler);
 
     /// <summary>
     /// Indexes the internal SPIR-V extension list  
     /// </summary>
-    public string GetRequiredExtension(nuint index)
-    {
-        Validate(MissingContext);
-        return Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_required_extension(compiler, index)) ?? "";
-    }
+    public string GetRequiredExtension(nuint index) 
+        => Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_required_extension(compiler, index)) ?? "";
 
     /// <summary>
     /// <para>
@@ -92,31 +99,22 @@ public unsafe class Reflector : ChildObject<Context>
 	/// <para>- Samplers which are statically used at least once with Dref opcodes.</para>
 	/// - Images which are statically used at least once with Dref opcodes.
     /// </summary>
-    public bool VariableIsDepthOrCompare(VariableID id)
-    {
-        Validate(MissingContext);
-        return spvc_compiler_variable_is_depth_or_compare(compiler, id);
-    }
+    public bool VariableIsDepthOrCompare(VariableID id) 
+        => spvc_compiler_variable_is_depth_or_compare(compiler, id);
 
     /// <summary>
     /// Gets the identifier (OpName) of an ID. If not defined, an empty string will be returned.
     /// </summary>
-    public string GetName(ID id)
-    {
-        Validate(MissingContext);
-        return Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_name(compiler, id)) ?? "";
-    }
+    public string GetName(ID id) 
+        => Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_name(compiler, id)) ?? "";
 
     /// <summary>
     /// Overrides the identifier OpName of an ID.
 	/// Identifiers beginning with underscores or identifiers which contain double underscores
 	/// are reserved by the implementation.
     /// </summary>
-    public void SetName(ID id, string argument)
-    {
-        Validate(MissingContext);
-        spvc_compiler_set_name(compiler, id, argument);
-    }
+    public void SetName(ID id, string argument) 
+        => spvc_compiler_set_name(compiler, id, argument);
 
     /*
      * Decorations.
@@ -126,83 +124,56 @@ public unsafe class Reflector : ChildObject<Context>
     /// <summary>
     /// Returns whether the decoration has been applied to the ID.
     /// </summary>
-    public bool HasDecoration(ID id, Decoration decoration)
-    {
-        Validate(MissingContext);
-        return spvc_compiler_has_decoration(compiler, id, decoration);
-    }
+    public bool HasDecoration(ID id, Decoration decoration) 
+        => spvc_compiler_has_decoration(compiler, id, decoration);
 
     /// <summary>
     /// Returns whether the decoration has been applied to a member of a struct.
     /// </summary>
-    public bool HasMemberDecoration(TypeID id, uint memberIndex, Decoration decoration)
-    {
-        Validate(MissingContext);
-        return spvc_compiler_has_member_decoration(compiler, id, memberIndex, decoration);
-    }
+    public bool HasMemberDecoration(TypeID id, uint memberIndex, Decoration decoration) 
+        => spvc_compiler_has_member_decoration(compiler, id, memberIndex, decoration);
 
     /// <summary>
     /// Applies a decoration to an ID. Effectively injects OpDecorate.
     /// </summary>
-    public void SetDecoration(ID id, Decoration decoration, uint argument)
-    {
-        Validate(MissingContext);
-        spvc_compiler_set_decoration(compiler, id, decoration, argument);
-    }
+    public void SetDecoration(ID id, Decoration decoration, uint argument) 
+        => spvc_compiler_set_decoration(compiler, id, decoration, argument);
 
     /// <summary>
     /// Applies a decoration to an ID. Effectively injects OpDecorate.
     /// </summary>
-    public void SetDecorationString(ID id, Decoration decoration, string argument)
-    {
-        Validate(MissingContext);
-        spvc_compiler_set_decoration_string(compiler, id, decoration, argument);
-    }
+    public void SetDecorationString(ID id, Decoration decoration, string argument) 
+        => spvc_compiler_set_decoration_string(compiler, id, decoration, argument);
 
     /// <summary>
     /// Similar to set_decoration, but for struct members.
     /// </summary>
-    public void SetMemberDecoration(TypeID id, uint memberIndex, Decoration decoration, uint argument)
-    {
-        Validate(MissingContext);
-        spvc_compiler_set_member_decoration(compiler, id, memberIndex, decoration, argument);
-    }
+    public void SetMemberDecoration(TypeID id, uint memberIndex, Decoration decoration, uint argument) 
+        => spvc_compiler_set_member_decoration(compiler, id, memberIndex, decoration, argument);
 
     /// <summary>
     /// Similar to set_decoration, but for struct members.
     /// </summary>
-    public void SetMemberDecorationString(TypeID id, uint memberIndex, Decoration decoration, string argument)
-    {
-        Validate(MissingContext);
-        spvc_compiler_set_member_decoration_string(compiler, id, memberIndex, decoration, argument);
-    }
+    public void SetMemberDecorationString(TypeID id, uint memberIndex, Decoration decoration, string argument) 
+        => spvc_compiler_set_member_decoration_string(compiler, id, memberIndex, decoration, argument);
 
     /// <summary>
     /// Sets the member identifier for OpTypeStruct ID, member number "index".
     /// </summary>
-    public void SetMemberName(TypeID id, uint memberIndex, string argument)
-    {
-        Validate(MissingContext);
-        spvc_compiler_set_member_name(compiler, id, memberIndex, argument);
-    }
+    public void SetMemberName(TypeID id, uint memberIndex, string argument) 
+        => spvc_compiler_set_member_name(compiler, id, memberIndex, argument);
 
     /// <summary>
     /// Removes the decoration for an ID.
     /// </summary>
-    public void UnsetDecoration(ID id, Decoration decoration)
-    {
-        Validate(MissingContext);
-        spvc_compiler_unset_decoration(compiler, id, decoration);
-    }
+    public void UnsetDecoration(ID id, Decoration decoration) 
+        => spvc_compiler_unset_decoration(compiler, id, decoration);
 
     /// <summary>
     /// Unsets a member decoration, similar to UnsetDecoration.
     /// </summary>
     public void UnsetMemberDecoration(TypeID id, uint memberIndex, Decoration decoration)
-    {
-        Validate(MissingContext);
-        spvc_compiler_unset_member_decoration(compiler, id, memberIndex, decoration);
-    }
+        => spvc_compiler_unset_member_decoration(compiler, id, memberIndex, decoration);
 
     /// <summary>
     /// <para>Renames an entry point from old_name to new_name.</para>
@@ -210,11 +181,8 @@ public unsafe class Reflector : ChildObject<Context>
 	/// albeit with a new name.</para>
 	/// GetEntryPoints() is essentially invalidated at this point.
     /// </summary>
-    public void RenameEntryPoint(string oldName, string newName, ExecutionModel model)
-    {
-        Validate(MissingContext);
-        parent.Throw(spvc_compiler_rename_entry_point(compiler, oldName, newName, model));
-    }
+    public void RenameEntryPoint(string oldName, string newName, ExecutionModel model) 
+        => context.Throw(spvc_compiler_rename_entry_point(compiler, oldName, newName, model));
 
     /// <summary>
     /// <para>Gets the value for decorations which take arguments.</para>
@@ -223,11 +191,8 @@ public unsafe class Reflector : ChildObject<Context>
 	/// If decoration doesn't exist or decoration is not recognized,
 	/// 0 will be returned.
     /// </summary>
-    public uint GetDecoration(ID id, Decoration decoration)
-    {
-        Validate(MissingContext);
-        return spvc_compiler_get_decoration(compiler, id, decoration);
-    }
+    public uint GetDecoration(ID id, Decoration decoration) 
+        => spvc_compiler_get_decoration(compiler, id, decoration);
 
     /// <summary>
     /// <para>Gets the value for decorations which take arguments.</para>
@@ -236,39 +201,27 @@ public unsafe class Reflector : ChildObject<Context>
 	/// If decoration doesn't exist or decoration is not recognized,
 	/// 0 will be returned.
     /// </summary>
-    public string GetDecorationString(ID id, Decoration decoration) 
-    {
-        Validate(MissingContext);
-        return Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_decoration_string(compiler, id, decoration)) ?? "";
-    }
+    public string GetDecorationString(ID id, Decoration decoration)  
+        => Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_decoration_string(compiler, id, decoration)) ?? "";
 
     /// <summary>
     /// Given an OpTypeStruct in ID, obtain the OpMemberDecoration for member number "index".
     /// </summary>
-    public uint GetMemberDecoration(TypeID id, uint memberIndex, Decoration decoration)
-    {
-        Validate(MissingContext);
-        return spvc_compiler_get_member_decoration(compiler, id, memberIndex, decoration);
-    }
+    public uint GetMemberDecoration(TypeID id, uint memberIndex, Decoration decoration) 
+        => spvc_compiler_get_member_decoration(compiler, id, memberIndex, decoration);
 
     /// <summary>
     /// Given an OpTypeStruct in ID, obtain the OpMemberDecoration for member number "index".
     /// </summary>
-    public string GetMemberDecorationString(TypeID id, uint memberIndex, Decoration decoration)
-    {
-        Validate(MissingContext);
-        return Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_member_decoration_string(compiler, id, memberIndex, decoration)) ?? "";
-    }
+    public string GetMemberDecorationString(TypeID id, uint memberIndex, Decoration decoration) 
+        => Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_member_decoration_string(compiler, id, memberIndex, decoration)) ?? "";
 
     /// <summary>
     /// Given an OpTypeStruct in ID, obtain the identifier for member number "index".
 	/// This may be an empty string.
     /// </summary>
     public string GetMemberName(TypeID id, uint memberIndex)
-    {
-        Validate(MissingContext);
-        return Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_member_name(compiler, id, memberIndex)) ?? "";
-    }
+        => Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_member_name(compiler, id, memberIndex)) ?? "";
 
     /*
      * Entry points.
@@ -280,9 +233,8 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public ReadOnlySpan<EntryPoint> GetEntryPoints() 
     {
-        Validate(MissingContext);
         Native.EntryPoint* entryPointsPtr = null;
-        parent.Throw(spvc_compiler_get_entry_points(compiler, &entryPointsPtr, out nuint numEntryPoints));
+        context.Throw(spvc_compiler_get_entry_points(compiler, &entryPointsPtr, out nuint numEntryPoints));
         Span<EntryPoint> entryPointsSpan = new EntryPoint[numEntryPoints];
 
         for (int i = 0; i < (int)numEntryPoints; i++)
@@ -308,55 +260,39 @@ public unsafe class Reflector : ChildObject<Context>
 	/// By default, the current entry point is set to the first OpEntryPoint which appears in the SPIR-V module.
     /// </summary>
     public void SetEntryPoint(EntryPoint entryPoint)
-    {
-        Validate(MissingContext);
-        parent.Throw(spvc_compiler_set_entry_point(compiler, entryPoint.name, entryPoint.executionModel));
-    }
+        => context.Throw(spvc_compiler_set_entry_point(compiler, entryPoint.name, entryPoint.executionModel));
 
     /// <summary>
     /// Gets a cleansed version of the entry point name.
     /// </summary>
-    public string GetCleansedEntryPointName(EntryPoint entryPoint)
-    {
-        Validate(MissingContext);
-        return Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_cleansed_entry_point_name(compiler, entryPoint.name, entryPoint.executionModel)) ?? "";
-    }
+    public string GetCleansedEntryPointName(EntryPoint entryPoint) 
+        => Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_cleansed_entry_point_name(compiler, entryPoint.name, entryPoint.executionModel)) ?? "";
 
     /// <summary>
     /// Set the execution mode of the active entry point.
     /// </summary>
-    public void SetExecutionMode(ExecutionMode mode)
-    {
-        Validate(MissingContext);
-        spvc_compiler_set_execution_mode(compiler, mode);
-    }
+    public void SetExecutionMode(ExecutionMode mode) 
+        => spvc_compiler_set_execution_mode(compiler, mode);
 
     /// <summary>
     /// Unset the execution mode of the active entry point.
     /// </summary>
-    public void UnsetExecutionMode(ExecutionMode mode)
-    {
-        Validate(MissingContext);
-        spvc_compiler_unset_execution_mode(compiler, mode); 
-    }
+    public void UnsetExecutionMode(ExecutionMode mode)  
+        => spvc_compiler_unset_execution_mode(compiler, mode); 
 
     /// <summary>
     /// Set the execution mode of the active entry point with arguments.
     /// </summary>
-    public void SetExecutionModeWithArguments(ExecutionMode mode, uint arg0, uint arg1, uint arg2)
-    {
-        Validate(MissingContext);
-        spvc_compiler_set_execution_mode_with_arguments(compiler, mode, arg0, arg1, arg2);
-    }
+    public void SetExecutionModeWithArguments(ExecutionMode mode, uint arg0, uint arg1, uint arg2) 
+        => spvc_compiler_set_execution_mode_with_arguments(compiler, mode, arg0, arg1, arg2);
 
     /// <summary>
     /// Get the execution modes of the active SPIR-V module.
     /// </summary>
     public ReadOnlySpan<ExecutionMode> GetExecutionModes()
     {
-        Validate(MissingContext);
         ExecutionMode* modesPtr = null;
-        parent.Throw(spvc_compiler_get_execution_modes(compiler, &modesPtr, out nuint numModes));
+        context.Throw(spvc_compiler_get_execution_modes(compiler, &modesPtr, out nuint numModes));
         return new ReadOnlySpan<ExecutionMode>(modesPtr, (int)numModes);
     }
 
@@ -368,47 +304,32 @@ public unsafe class Reflector : ChildObject<Context>
 	/// LocalSize always returns a literal. If execution mode is LocalSizeId,
 	/// the literal (spec constant or not) is still returned.
     /// </summary>
-    public uint GetExecutionModeArgument(ExecutionMode mode)
-    {
-        Validate(MissingContext);
-        return spvc_compiler_get_execution_mode_argument(compiler, mode);
-    }
+    public uint GetExecutionModeArgument(ExecutionMode mode) 
+        => spvc_compiler_get_execution_mode_argument(compiler, mode);
 
     /// <summary>
     /// Get the arguments of the given execution mode by index.
     /// </summary>
-    public uint GetExecutionModeArgumentByIndex(ExecutionMode mode, uint index)
-    {
-        Validate(MissingContext);
-        return spvc_compiler_get_execution_mode_argument_by_index(compiler, mode, index);
-    }
+    public uint GetExecutionModeArgumentByIndex(ExecutionMode mode, uint index) 
+        => spvc_compiler_get_execution_mode_argument_by_index(compiler, mode, index);
 
     /// <summary>
     /// Get the execution model for the active SPIR-V module. 
     /// </summary>
-    public ExecutionModel GetExecutionModel()
-    {
-        Validate(MissingContext);
-        return spvc_compiler_get_execution_model(compiler);
-    }
+    public ExecutionModel GetExecutionModel() 
+        => spvc_compiler_get_execution_model(compiler);
 
     /// <summary>
     /// Traverses all reachable opcodes and sets active_builtins to a bitmask of all builtin variables which are accessed in the shader.
     /// </summary>
-    public void UpdateActiveBuiltins()
-    {
-        Validate(MissingContext);
-        spvc_compiler_update_active_builtins(compiler);
-    }
+    public void UpdateActiveBuiltins() 
+        => spvc_compiler_update_active_builtins(compiler);
 
     /// <summary>
     /// Returns whether or not an active builtin with a given storage class is present.
     /// </summary>
-    public bool HasActiveBuiltin(BuiltIn builtin, StorageClass storage)
-    {
-        Validate(MissingContext);
-        return spvc_compiler_has_active_builtin(compiler, builtin, storage);
-    }
+    public bool HasActiveBuiltin(BuiltIn builtin, StorageClass storage) 
+        => spvc_compiler_has_active_builtin(compiler, builtin, storage);
 
     /*
      * Type query interface.
@@ -418,11 +339,8 @@ public unsafe class Reflector : ChildObject<Context>
     /// <summary>
     /// Gets a handle to a SpirvCrossType instance for a SpirvTypeID.
     /// </summary>
-    public Type GetTypeHandle(TypeID id)
-    {
-        Validate(MissingContext);
-        return CreateType(this, id, spvc_compiler_get_type_handle(compiler, id));
-    }
+    public Type GetTypeHandle(TypeID id) 
+        => CreateType(context, id, spvc_compiler_get_type_handle(compiler, id));
 
     /*
      * Buffer layout query.
@@ -434,8 +352,7 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public nuint GetDeclaredStructSize(Type structType) 
     {
-        Validate(MissingContext);
-        parent.Throw(spvc_compiler_get_declared_struct_size(compiler, structType.type, out nuint size));
+        context.Throw(spvc_compiler_get_declared_struct_size(compiler, structType.type, out nuint size));
         return size;
     } 
     
@@ -451,10 +368,9 @@ public unsafe class Reflector : ChildObject<Context>
 	/// To get the array stride of the last member, something like:
 	/// get_declared_struct_size_runtime_array(type, 1) - get_declared_struct_size_runtime_array(type, 0) will work.
     /// </summary>
-    public nuint GetDeclaredStructSizeRuntimeArray(Type structType, nuint arraySize) 
+    public nuint GetDeclaredStructSizeRuntimeArray(Type structType, nuint arraySize)  
     {
-        Validate(MissingContext);
-        parent.Throw(spvc_compiler_get_declared_struct_size_runtime_array(compiler, structType.type, arraySize, out nuint size));
+        context.Throw(spvc_compiler_get_declared_struct_size_runtime_array(compiler, structType.type, arraySize, out nuint size));
         return size;
     }
 
@@ -463,8 +379,7 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public nuint GetDeclaredStructMemberSize(Type type, uint index)
     {
-        Validate(MissingContext);
-        parent.Throw(spvc_compiler_get_declared_struct_member_size(compiler, type.type, index, out nuint size));
+        context.Throw(spvc_compiler_get_declared_struct_member_size(compiler, type.type, index, out nuint size));
         return size;
     }
 
@@ -478,8 +393,7 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public uint StructMemberOffset(Type type, uint index)
     {
-        Validate(MissingContext);
-        parent.Throw(spvc_compiler_type_struct_member_offset(compiler, type.type, index, out uint offset));
+        context.Throw(spvc_compiler_type_struct_member_offset(compiler, type.type, index, out uint offset));
         return offset;
     }
 
@@ -493,8 +407,7 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public uint StructMemberArrayStride(Type type, uint index)
     {
-        Validate(MissingContext);
-        parent.Throw(spvc_compiler_type_struct_member_array_stride(compiler, type.type, index, out uint stride));
+        context.Throw(spvc_compiler_type_struct_member_array_stride(compiler, type.type, index, out uint stride));
         return stride;
     }
 
@@ -508,8 +421,7 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public uint StructMemberMatrixStride(Type type, uint index)
     {
-        Validate(MissingContext);
-        parent.Throw(spvc_compiler_type_struct_member_matrix_stride(compiler, type.type, index, out uint stride));
+        context.Throw(spvc_compiler_type_struct_member_matrix_stride(compiler, type.type, index, out uint stride));
         return stride;
     }
 
@@ -533,9 +445,8 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public ReadOnlySpan<SpecializationConstant> GetSpecializationConstants()
     {
-        Validate(MissingContext);
         SpecializationConstant* constantsPtr = null;
-        parent.Throw(spvc_compiler_get_specialization_constants(compiler, &constantsPtr, out nuint numConstants));
+        context.Throw(spvc_compiler_get_specialization_constants(compiler, &constantsPtr, out nuint numConstants));
         return new ReadOnlySpan<SpecializationConstant>(constantsPtr, (int)numConstants);
     }
 
@@ -543,10 +454,7 @@ public unsafe class Reflector : ChildObject<Context>
     /// Gets a handle to a SpirvCrossConstant instance for a ConstantID.
     /// </summary>
     public Constant GetConstantHandle(ConstantID id)
-    {
-        Validate(MissingContext);
-        return CreateConstant(this, id, spvc_compiler_get_constant_handle(compiler, id));
-    }
+        => CreateConstant(context, id, spvc_compiler_get_constant_handle(compiler, id));
 
     /// <summary>
     /// <para>In SPIR-V, the compute work group size can be represented by a constant vector, in which case
@@ -568,11 +476,8 @@ public unsafe class Reflector : ChildObject<Context>
 	/// If LocalSizeId is used, there is no uvec3 value representing the workgroup size, so the return value is 0,
 	/// but x, y and z are written as normal if the components are specialization constants.
     /// </summary>
-    public ConstantID GetWorkGroupSizeSpecificationConstants(out SpecializationConstant x, out SpecializationConstant y, out SpecializationConstant z)
-    {
-        Validate(MissingContext);
-        return spvc_compiler_get_work_group_size_specialization_constants(compiler, out x, out y, out z);
-    }
+    public ConstantID GetWorkGroupSizeSpecificationConstants(out SpecializationConstant x, out SpecializationConstant y, out SpecializationConstant z) 
+        => spvc_compiler_get_work_group_size_specialization_constants(compiler, out x, out y, out z);
 
     /*
      * Buffer ranges
@@ -587,9 +492,8 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public ReadOnlySpan<BufferRange> GetActiveBufferRanges(VariableID id)
     {
-        Validate(MissingContext);
         BufferRange* rangesPtr = null;
-        parent.Throw(spvc_compiler_get_active_buffer_ranges(compiler, id, &rangesPtr, out nuint numRanges));
+        context.Throw(spvc_compiler_get_active_buffer_ranges(compiler, id, &rangesPtr, out nuint numRanges));
         return new ReadOnlySpan<BufferRange>(rangesPtr, (int)numRanges);
     }
 
@@ -607,30 +511,25 @@ public unsafe class Reflector : ChildObject<Context>
 	/// If the decoration does not have any value attached to it (e.g. DecorationRelaxedPrecision), this function will also return false.
     /// </summary>
     public bool GetBinaryOffsetForDeclaration(VariableID id, Decoration decoration, out uint wordOffset)
-    { 
-        Validate(MissingContext);
-        return spvc_compiler_get_binary_offset_for_decoration(compiler, id, decoration, out wordOffset);
-    }
+        => spvc_compiler_get_binary_offset_for_decoration(compiler, id, decoration, out wordOffset);
 
     /// <summary>
     /// Gets the list of all SPIR-V Capabilities which were declared in the SPIR-V module.
     /// </summary>
     public ReadOnlySpan<Capability> GetDeclaredCapabilities()
     {
-        Validate(MissingContext);
         Capability* capabilitiesPtr = null;
-        parent.Throw(spvc_compiler_get_declared_capabilities(compiler, &capabilitiesPtr, out nuint numCapabilities));
+        context.Throw(spvc_compiler_get_declared_capabilities(compiler, &capabilitiesPtr, out nuint numCapabilities));
         return new ReadOnlySpan<Capability>(capabilitiesPtr, (int)numCapabilities);
     }
 
     /// <summary>
     /// Gets the list of all SPIR-V extensions which were declared in the SPIR-V module.
     /// </summary>
-    public string[] GetDeclaredExtensions()
+    public string[] GetDeclaredExtensions() 
     {
-        Validate(MissingContext);
         byte** extensionsPtr = null;
-        parent.Throw(spvc_compiler_get_declared_extensions(compiler, &extensionsPtr, out nuint numExtensions));
+        context.Throw(spvc_compiler_get_declared_extensions(compiler, &extensionsPtr, out nuint numExtensions));
         
         string[] extensions = new string[numExtensions];
 
@@ -655,11 +554,8 @@ public unsafe class Reflector : ChildObject<Context>
 	///
 	/// This also applies to HLSL cbuffers.
     /// </summary>
-    public string GetRemappedDeclaredBlockName(VariableID id)
-    {
-        Validate(MissingContext);
-        return Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_remapped_declared_block_name(compiler, id)) ?? "";
-    }
+    public string GetRemappedDeclaredBlockName(VariableID id) 
+        => Marshal.PtrToStringUTF8((IntPtr)spvc_compiler_get_remapped_declared_block_name(compiler, id)) ?? "";
 
     /// <summary>
     /// <para>For buffer block variables, get the decorations for that variable.</para>
@@ -669,9 +565,8 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public ReadOnlySpan<Decoration> GetBufferBlockDecorations(VariableID id)
     {
-        Validate(MissingContext);
         Decoration* decorationsPtr = null;
-        parent.Throw(spvc_compiler_get_buffer_block_decorations(compiler, id, &decorationsPtr, out nuint numDecorations));
+        context.Throw(spvc_compiler_get_buffer_block_decorations(compiler, id, &decorationsPtr, out nuint numDecorations));
         return new ReadOnlySpan<Decoration>(decorationsPtr, (int)numDecorations);
     }
 
@@ -687,10 +582,9 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public Set GetActiveInterfaceVariables()
     {
-        Validate(MissingContext);
         Native.Set* setPtr = null;
-        parent.Throw(spvc_compiler_get_active_interface_variables(compiler, &setPtr));
-        return new Set(this, setPtr);
+        context.Throw(spvc_compiler_get_active_interface_variables(compiler, &setPtr));
+        return new Set(context, setPtr);
     }
 
     /// <summary>
@@ -698,10 +592,9 @@ public unsafe class Reflector : ChildObject<Context>
     /// </summary>
     public Resources CreateShaderResources()
     {
-        Validate(MissingContext);
         Native.Resources* resourcePtr = null;
-        parent.Throw(spvc_compiler_create_shader_resources(compiler, &resourcePtr));
-        return new Resources(this, resourcePtr);
+        context.Throw(spvc_compiler_create_shader_resources(compiler, &resourcePtr));
+        return new Resources(context, resourcePtr);
     }
 
     /// <summary>
@@ -709,11 +602,10 @@ public unsafe class Reflector : ChildObject<Context>
 	/// E.g.: get_shader_resources(get_active_variables()) to only return the variables which are statically
 	/// accessed.
     /// </summary>
-    public Resources CreateShaderResourcesForActiveVariables(in Set active)
+    public Resources CreateShaderResourcesForActiveVariables(in Set active) 
     {
-        Validate(MissingContext);
         Native.Resources* resourcePtr = null;
-        parent.Throw(spvc_compiler_create_shader_resources_for_active_variables(compiler, &resourcePtr, active.set));
-        return new Resources(this, resourcePtr);
+        context.Throw(spvc_compiler_create_shader_resources_for_active_variables(compiler, &resourcePtr, active.set));
+        return new Resources(context, resourcePtr);
     }
 }

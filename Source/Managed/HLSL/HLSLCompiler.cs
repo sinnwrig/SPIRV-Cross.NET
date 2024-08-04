@@ -5,48 +5,73 @@ namespace SPIRVCross.NET.HLSL;
 
 using static Native.HLSLCompiler;
 
+
+/// <summary>
+/// <inheritdoc/>
+/// <para>Outputs cross-compiled HLSL when calling <see cref="Compile()"/>.</para>
+/// </summary>
 public unsafe partial class HLSLCrossCompiler : Compiler
 {
+    /// <summary>
+    /// HLSL-specific options to compile with.
+    /// </summary>
     public HLSLCompilerOptions hlslOptions = new();
 
     internal unsafe HLSLCrossCompiler(Context context, Native.Compiler* compiler) : base(context, compiler) { }
 
-    /* Compile IR into a string. *source is owned by the context, and caller must not free it themselves. */
+    /// <inheritdoc/>
     public override string Compile()
     {
-        hlslOptions.Apply(parent, optionsPtr);
+        hlslOptions.Apply(context, optionsPtr);
         return base.Compile();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HLSLSetRootConstantsLayout(RootConstants[] constantInfo)
-        => parent.Throw(spvc_compiler_hlsl_set_root_constants_layout(compiler, constantInfo, (nuint)constantInfo.Length));
+    /// <summary>
+    /// Sets the custom root constant layout, which should be emitted
+	/// when translating push constant ranges.
+    /// </summary>
+    public void SetRootConstantsLayout(RootConstants[] constantInfo)
+    {
+        Span<RootConstants> constants = constantInfo;
+        
+        fixed (RootConstants* constantsPtr = &constants.GetPinnableReference())
+            context.Throw(spvc_compiler_hlsl_set_root_constants_layout(compiler, constantsPtr, (nuint)constantInfo.Length));
+    }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HLSLAddVertexAttributeRemap(VertexAttributeRemap[] remaps)
-        => parent.Throw(spvc_compiler_hlsl_add_vertex_attribute_remap(compiler, remaps, (nuint)remaps.Length));
+    /// <summary>
+    /// Adds an array of remaps to convert a vertex layout location into an HLSL semantic.  
+    /// </summary>
+    public void AddVertexAttributeRemap(VertexAttributeRemap[] remaps)
+    {
+        Native.VertexAttributeRemap* remapsPtr = stackalloc Native.VertexAttributeRemap[remaps.Length];
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public VariableID HLSLRemapNumWorkgroupsBuiltin()
+        for (int i = 0; i < remaps.Length; i++)
+        {
+            remapsPtr[i].location = remaps[i].location;
+
+            int len = System.Text.Encoding.UTF8.GetByteCount(remaps[i].semantic);
+
+            remapsPtr[i].semantic = (byte*)Marshal.AllocHGlobal(len);
+            Span<byte> nativeSemantic = new Span<byte>(remapsPtr[i].semantic, len);
+
+            System.Text.Encoding.UTF8.GetBytes(remaps[i].semantic, nativeSemantic);
+        }
+
+        context.Throw(spvc_compiler_hlsl_add_vertex_attribute_remap(compiler, remapsPtr, (nuint)remaps.Length));
+
+        for (int i = 0; i < remaps.Length; i++)
+            Marshal.FreeHGlobal((IntPtr)remapsPtr[i].semantic);
+    }
+
+    public VariableID RemapNumWorkgroupsBuiltin()
         => spvc_compiler_hlsl_remap_num_workgroups_builtin(compiler);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HLSLSetResourceBindingFlags(BindingFlags flags)
-        => parent.Throw(spvc_compiler_hlsl_set_resource_binding_flags(compiler, flags));
+    public void SetResourceBindingFlags(BindingFlags flags)
+        => context.Throw(spvc_compiler_hlsl_set_resource_binding_flags(compiler, flags));
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void HLSLAddResourceBinding(in ResourceBinding binding)
-        => parent.Throw(spvc_compiler_hlsl_add_resource_binding(compiler, in binding));
+    public void AddResourceBinding(in ResourceBinding binding)
+        => context.Throw(spvc_compiler_hlsl_add_resource_binding(compiler, in binding));
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool HLSLIsResourceUsed(ExecutionModel model, uint set, uint binding)
+    public bool IsResourceUsed(ExecutionModel model, uint set, uint binding)
         => spvc_compiler_hlsl_is_resource_used(compiler, model, set, binding);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsCompilerBufferHLSLCounterBuffer(VariableID id)
-        => spvc_compiler_buffer_is_hlsl_counter_buffer(compiler, id);
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool CompilerBufferGetHLSLCounterBuffer(VariableID id, out VariableID counter_id)
-        => spvc_compiler_buffer_get_hlsl_counter_buffer(compiler, id, out counter_id);
 }

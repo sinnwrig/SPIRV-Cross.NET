@@ -6,6 +6,9 @@ namespace SPIRVCross.NET.MSL;
 using static Native.Compiler;
 using Option = Native.CompilerOption;
 
+/// <summary>
+/// MSL specific SPIR-V cross-compilation options
+/// </summary>
 public struct MSLCompilerOptions()
 {
     public Platform platform = Platform.MacOS;

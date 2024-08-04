@@ -208,7 +208,6 @@ public struct CBool
 public struct ReflectedResource
 {
 	public VariableID id;
-	
 	public TypeID base_type_id;
 	public TypeID type_id;
 

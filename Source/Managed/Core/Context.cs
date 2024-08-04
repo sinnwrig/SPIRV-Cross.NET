@@ -5,13 +5,18 @@ namespace SPIRVCross.NET;
 
 using static Native.Context;
 
-public sealed unsafe class Context : IDisposable, IParentObject
+/// <summary>
+/// Wraps SPIRV-Cross context functionality provided by <see cref="Native.Context"/> into a type-safe and memory-safe object.
+/// <para>An instance of a <see cref="Context"/> must be kept alive in order to utilize SPIR-V functionality provided by the child objects it returns.</para>
+/// </summary>
+public sealed unsafe class Context : IDisposable
 {
     internal Native.Context* context;
 
     /// <summary>
+    /// Has this context instance been disposed?
     /// </summary>
-    public bool IsAlive => context != null;
+    public bool IsDisposed => context == null;
 
     /// <summary>
     /// Initializes a new SpirvCrossContext along with its native resources.
@@ -181,6 +186,8 @@ public sealed unsafe class Context : IDisposable, IParentObject
         => new CPP.CPPCrossCompiler(this, CreateCompiler(spirvWords, Native.Backend.CPP));
 
     /// <summary>
+    /// Disposes of the native SPIRV-Cross context and all the resources it owns.
+    /// Calling any SPIRV-Cross functionality in child objects created by this instance is illegal and will throw an exception.
     /// </summary>
     public void Dispose()
     {
@@ -198,5 +205,27 @@ public sealed unsafe class Context : IDisposable, IParentObject
         Console.WriteLine("SpirvCrossContext was not disposed with IDisposable.Dispose(). Ensure that Dispose() is being called when the context is no longer in use.");
         Console.ForegroundColor = prevColor;
         Dispose();
+    }
+}
+
+
+/// <summary>
+/// Represents a class that relies on a Context object for its operation and performs validation to ensure that the context is still valid.
+/// <para>If the parent context is disposed, attempting to use any validated methods on classes inheriting from this will throw a <see cref="MissingContextException"/>.</para>
+/// </summary>
+public class ContextChild
+{
+    internal readonly Context context;
+
+    internal ContextChild(Context context)
+    {
+        this.context = context;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void Validate()
+    {
+        if (context.IsDisposed)
+            throw new MissingContextException(GetType());
     }
 }

@@ -31,7 +31,7 @@ public enum BuiltinResourceType
 } 
 
 /* Maps to spirv_cross::SPIRType::BaseType. */
-public enum BaseType
+public enum BaseValueType
 {
 	Unknown = 0,
 	Void = 1,
@@ -449,7 +449,6 @@ public enum Capability
     GroupUniformArithmeticKHR = 6400,
 }
 
-[Flags]
 public enum Decoration 
 {
     RelaxedPrecision = 0,

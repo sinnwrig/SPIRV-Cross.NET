@@ -313,4 +313,12 @@ public partial struct Compiler
     [LibraryImport(LibName)]
     [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]
     public static unsafe partial Result spvc_compiler_create_shader_resources_for_active_variables(Compiler* compiler, Resources** resources, Set* active);
+
+    [LibraryImport(LibName)]
+    [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]
+    public static unsafe partial CBool spvc_compiler_buffer_is_hlsl_counter_buffer(Compiler* compiler, VariableID id);
+
+    [LibraryImport(LibName)]
+    [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]
+    public static unsafe partial CBool spvc_compiler_buffer_get_hlsl_counter_buffer(Compiler* compiler, VariableID id, out VariableID counter_id);
 }

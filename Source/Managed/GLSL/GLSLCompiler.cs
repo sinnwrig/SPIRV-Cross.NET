@@ -5,8 +5,15 @@ namespace SPIRVCross.NET.GLSL;
 
 using static Native.Compiler;
 
+/// <summary>
+/// <inheritdoc/>
+/// <para>Outputs cross-compiled GLSL when calling <see cref="Compile()"/>.</para>
+/// </summary>
 public unsafe partial class GLSLCrossCompiler : Compiler
 {
+    /// <summary>
+    /// GLSL-specific options to compile with.
+    /// </summary>
     public GLSLCompilerOptions glslOptions = new();
 
     internal unsafe GLSLCrossCompiler(Context context, Native.Compiler* compiler) : base(context, compiler) { }
@@ -19,15 +26,12 @@ public unsafe partial class GLSLCrossCompiler : Compiler
     /// The name of the uniform array will be the same as the interface block name.
     /// </summary>
     public void FlattenBufferBlock(VariableID id)
-    {
-        Validate(MissingContext);
-        parent.Throw(spvc_compiler_flatten_buffer_block(compiler, id));
-    }
+        => context.Throw(spvc_compiler_flatten_buffer_block(compiler, id));
 
     /// <inheritdoc/>
     public override string Compile()
     {
-        glslOptions.Apply(parent, optionsPtr);
+        glslOptions.Apply(context, optionsPtr);
         return base.Compile();
     }
 }

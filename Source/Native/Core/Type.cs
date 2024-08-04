@@ -19,7 +19,7 @@ public partial struct Type
 
     [LibraryImport(LibName)]
     [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]
-    public static unsafe partial BaseType spvc_type_get_basetype(Type* type);
+    public static unsafe partial BaseValueType spvc_type_get_basetype(Type* type);
     
     [LibraryImport(LibName)]
     [UnmanagedCallConv(CallConvs = [ typeof(CallConvCdecl) ] )]

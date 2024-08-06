@@ -12,7 +12,7 @@ public class Program
 {       
     public static void Main()
     {
-        CompilerOptions options = new CompilerOptions(ShaderType.Fragment.ToProfile(6, 0))
+        DirectXShaderCompiler.NET.CompilerOptions options = new DirectXShaderCompiler.NET.CompilerOptions(ShaderType.Fragment.ToProfile(6, 0))
         {
             entryPoint = "pixel",
             generateAsSpirV = true,
@@ -28,9 +28,9 @@ public class Program
             return;
         } 
         
-        using SpirvCrossContext context = new SpirvCrossContext();
+        using Context context = new Context();
 
-        SpirvCrossParsedIR parsedIR = context.ParseSpirv(result.objectBytes);
+        ParsedIR parsedIR = context.ParseSpirv(result.objectBytes);
 
         GLSLCrossCompiler glslCompiler = context.CreateGLSLCompiler(parsedIR);
         DoGLSLStuff(glslCompiler);
@@ -52,30 +52,30 @@ public class Program
     static void DoHLSLStuff(HLSLCrossCompiler crossCompiler)
     {
         // Do some basic reflection.
-        SpirvCrossResources resources = crossCompiler.CreateShaderResources();
+        Resources resources = crossCompiler.CreateShaderResources();
 
         Console.WriteLine("\nGetting reflected data\n");
 
-        foreach (var resource in resources.GetResourceListForType(ResourceType.UniformBuffer))
+        foreach (var resource in resources.UniformBuffers)
         {
             Console.WriteLine($"Uniform Buffer {resource.name}");
 
-            SpirvCrossType type = crossCompiler.GetTypeHandle(resource.base_type_id);
-            SpirvTypeID typeID = type.GetBaseTypeID();
+            SPIRVCross.NET.Type type = crossCompiler.GetTypeHandle(resource.base_type_id);
+            TypeID typeID = type.BaseTypeID;
 
-            for (uint i = 0; i < type.GetNumMemberTypes(); i++)
+            for (uint i = 0; i < type.MemberCount; i++)
             {
-                SpirvTypeID typeID2 = type.GetMemberType(i);
-                SpirvCrossType type2 = crossCompiler.GetTypeHandle(typeID2);
+                TypeID typeID2 = type.GetMemberType(i);
+                SPIRVCross.NET.Type type2 = crossCompiler.GetTypeHandle(typeID2);
 
-                Console.WriteLine($"\t{type2.GetBaseType()} {crossCompiler.GetMemberName(typeID, i)}. (o{crossCompiler.StructMemberOffset(type, i)}, s{crossCompiler.GetDeclaredStructMemberSize(type, i)})");
+                Console.WriteLine($"\t{type2.BaseType} {crossCompiler.GetMemberName(typeID, i)}. (o{crossCompiler.StructMemberOffset(type, i)}, s{crossCompiler.GetDeclaredStructMemberSize(type, i)})");
 
-                for (uint j = 0; j < type2.GetNumMemberTypes(); j++)
+                for (uint j = 0; j < type2.MemberCount; j++)
                 {
-                    SpirvTypeID typeID3 = type2.GetMemberType(j);
-                    SpirvCrossType type3 = crossCompiler.GetTypeHandle(typeID3);
+                    TypeID typeID3 = type2.GetMemberType(j);
+                    SPIRVCross.NET.Type type3 = crossCompiler.GetTypeHandle(typeID3);
 
-                    Console.WriteLine($"\t\t{type3.GetBaseType()} {crossCompiler.GetMemberName(typeID2, j)}. (o{crossCompiler.StructMemberOffset(type2, j)}, s{crossCompiler.GetDeclaredStructMemberSize(type2, j)})");
+                    Console.WriteLine($"\t\t{type3.BaseType} {crossCompiler.GetMemberName(typeID2, j)}. (o{crossCompiler.StructMemberOffset(type2, j)}, s{crossCompiler.GetDeclaredStructMemberSize(type2, j)})");
                 }
             }
         }

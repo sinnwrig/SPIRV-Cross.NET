@@ -2,7 +2,7 @@
 
 A cross-platform .NET 8.0 wrapper for Microsoft's DirectX Shader Compiler, written in C#. 
 
-[![NuGet](https://img.shields.io/nuget/v/DirectXShaderCompiler.NET.svg)](https://www.nuget.org/packages/DirectXShaderCompiler.NET)
+[![NuGet](https://img.shields.io/nuget/v/SPIRV-Cross.NET.svg)](https://www.nuget.org/packages/SPIRV-Cross.NET)
 
 # Usage
 

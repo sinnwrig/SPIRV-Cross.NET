@@ -8,8 +8,8 @@ using SPIRVCross.NET.MSL;
 
 namespace Application;
 
-public class Program
-{       
+public class Example
+{
     public static void Main()
     {
         DirectXShaderCompiler.NET.CompilerOptions options = new DirectXShaderCompiler.NET.CompilerOptions(ShaderType.Fragment.ToProfile(6, 0))
@@ -26,8 +26,8 @@ public class Program
             Console.WriteLine("Errors compiling shader:");
             Console.WriteLine(result.compilationErrors);
             return;
-        } 
-        
+        }
+
         using Context context = new Context();
 
         ParsedIR parsedIR = context.ParseSpirv(result.objectBytes);
@@ -37,7 +37,7 @@ public class Program
 
         HLSLCrossCompiler hlslCompiler = context.CreateHLSLCompiler(parsedIR);
         DoHLSLStuff(hlslCompiler);
-        
+
         MSLCrossCompiler mslCompiler = context.CreateMSLCompiler(parsedIR);
         DoMSLStuff(mslCompiler);
     }
@@ -88,6 +88,6 @@ public class Program
 
     static void DoMSLStuff(MSLCrossCompiler crossCompiler)
     {
-        
+
     }
 }

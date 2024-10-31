@@ -30,7 +30,7 @@ public sealed unsafe class Resources : ContextChild
     internal Resources(Context context, NativeBindings.Resources* resources) : base(context)
     {
         this._resources = resources;
-        
+
         _uniformBuffers = GetResourceListForType(ResourceType.UniformBuffer);
         _storageBuffers = GetResourceListForType(ResourceType.StorageBuffer);
         _stageInputs = GetResourceListForType(ResourceType.StageInput);
@@ -44,7 +44,8 @@ public sealed unsafe class Resources : ContextChild
         _separateSamplers = GetResourceListForType(ResourceType.SeparateSamplers);
         _accelerationStructures = GetResourceListForType(ResourceType.AccelerationStructure);
         _recordBuffers = GetResourceListForType(ResourceType.ShaderRecordBuffer);
-    
+        _plainUniforms = GetResourceListForType(ResourceType.GLPlainUniform);
+
         _builtinInputs = GetBuiltinResourceListForType(BuiltinResourceType.StageInput);
         _builtinOutputs = GetBuiltinResourceListForType(BuiltinResourceType.StageOutput);
     }
@@ -145,7 +146,7 @@ public sealed unsafe class Resources : ContextChild
     /// Acceleration structures defined in SPIR-V source.
     /// </summary>
     public ReadOnlySpan<ReflectedResource> AccelerationStructures => _accelerationStructures;
-    
+
     private ReflectedResource[] _recordBuffers;
 
     /// <summary>
@@ -153,6 +154,12 @@ public sealed unsafe class Resources : ContextChild
     /// </summary>
     public ReadOnlySpan<ReflectedResource> RecordBuffers => _recordBuffers;
 
+    private ReflectedResource[] _plainUniforms;
+
+    /// <summary>
+    /// Plain GL Uniforms defined in SPIR-V source.
+    /// </summary>
+    public ReadOnlySpan<ReflectedResource> PlainUniforms => _plainUniforms;
 
     private ReflectedBuiltinResource[] _builtinInputs;
 
@@ -160,7 +167,7 @@ public sealed unsafe class Resources : ContextChild
     /// Built-in inputs defined in SPIR-V source.
     /// </summary>
     public ReadOnlySpan<ReflectedBuiltinResource> BuiltinInputs => _builtinInputs;
-    
+
     private ReflectedBuiltinResource[] _builtinOutputs;
 
     /// <summary>
@@ -173,20 +180,20 @@ public sealed unsafe class Resources : ContextChild
     {
         NativeBindings.ReflectedResource* resourceListPtr = null;
         context.Throw(spvc_resources_get_resource_list_for_type(resources, type, &resourceListPtr, out nuint resourceSize));
-        
+
         ReflectedResource[] resourceSpan = new ReflectedResource[(int)resourceSize];
 
         for (int i = 0; i < resourceSpan.Length; i++)
             resourceSpan[i] = ToManagedResource(resourceListPtr[i]);
-        
+
         return resourceSpan;
     }
 
-    private ReflectedBuiltinResource[] GetBuiltinResourceListForType(BuiltinResourceType type) 
+    private ReflectedBuiltinResource[] GetBuiltinResourceListForType(BuiltinResourceType type)
     {
         NativeBindings.ReflectedBuiltinResource* resourceListPtr = null;
         context.Throw(spvc_resources_get_builtin_resource_list_for_type(resources, type, &resourceListPtr, out nuint resourceSize));
-        
+
         ReflectedBuiltinResource[] resourceSpan = new ReflectedBuiltinResource[(int)resourceSize];
 
         for (int i = 0; i < resourceSpan.Length; i++)

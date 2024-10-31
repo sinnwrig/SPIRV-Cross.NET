@@ -49,10 +49,10 @@ public enum Result
 
 internal static class OptionBits
 {
-    internal const int Common = 0x1000000;
-    internal const int GLSL = 0x2000000;
-    internal const int HLSL = 0x4000000;
-    internal const int MSL = 0x8000000;
+	internal const int Common = 0x1000000;
+	internal const int GLSL = 0x2000000;
+	internal const int HLSL = 0x4000000;
+	internal const int MSL = 0x8000000;
 }
 
 public enum CompilerOption
@@ -178,12 +178,15 @@ public enum CompilerOption
 	MSL_READWRITE_TEXTURE_FENCES = 86 | OptionBits.MSL,
 	MSL_REPLACE_RECURSIVE_INPUTS = 87 | OptionBits.MSL,
 	MSL_AGX_MANUAL_CUBE_GRAD_FIXUP = 88 | OptionBits.MSL,
-	MSL_FORCE_FRAGMENT_WITH_SIDE_EFFECTS_EXECUTION = 89 | OptionBits.MSL
+	MSL_FORCE_FRAGMENT_WITH_SIDE_EFFECTS_EXECUTION = 89 | OptionBits.MSL,
+
+	HLSL_USE_ENTRY_POINT_NAME = 90 | OptionBits.HLSL,
+	HLSL_PRESERVE_STRUCTURED_BUFFERS = 91 | OptionBits.HLSL,
 }
 
 public enum ResourceType
 {
-    Unknown = 0,
+	Unknown = 0,
 	UniformBuffer = 1,
 	StorageBuffer = 2,
 	StageInput = 3,
@@ -198,10 +201,11 @@ public enum ResourceType
 	AccelerationStructure = 12,
 	RayQuery = 13,
 	ShaderRecordBuffer = 14,
+	GLPlainUniform = 15,
 }
 
 public enum BuiltinResourceType
 {
 	StageInput = 1,
 	StageOutput = 2,
-} 
+}

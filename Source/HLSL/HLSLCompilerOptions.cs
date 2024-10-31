@@ -14,7 +14,7 @@ public struct HLSLCompilerOptions()
 	/// <summary>
 	/// The HLSL shader model to target.
 	/// </summary>
-    public uint shaderModel = 30;
+	public uint shaderModel = 30;
 
 	/// <summary>
 	/// Allows the PointSize builtin in SM 4.0+, and ignores it, as PointSize is not supported in SM 4+.
@@ -63,16 +63,30 @@ public struct HLSLCompilerOptions()
 	/// </summary>
 	public bool flattenMatrixVertexInputSemantics = false;
 
+	/// <summary>
+	/// Rather than emitting main() for the entry point, use the name in SPIR-V.
+	/// </summary>
+	public bool useEntryPointName = false;
 
-    internal readonly unsafe void Apply(Context ctx, NativeBindings.CompilerOptions* options)
+	/// <summary>
+	/// <para>Preserve (RW)StructuredBuffer types if the input source was HLSL.</para>
+	/// This relies on UserTypeGOOGLE to encode the buffer type either as "structuredbuffer" or "rwstructuredbuffer"
+	/// whereas the type can be extended with an optional subtype, e.g. "structuredbuffer:int".
+	/// </summary>
+	public bool preserveStructuredBuffers = false;
+
+
+	internal readonly unsafe void Apply(Context ctx, NativeBindings.CompilerOptions* options)
 	{
-        ctx.Throw(spvc_compiler_options_set_uint(options, Option.HLSL_SHADER_MODEL, shaderModel));
-	    ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_POINT_SIZE_COMPAT, pointSizeCompat));
-	    ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_POINT_COORD_COMPAT, pointCoordCompat));
-	    ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_SUPPORT_NONZERO_BASE_VERTEX_BASE_INSTANCE, supportNonzeroBaseVertexBaseInstance));
-	    ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_FORCE_STORAGE_BUFFER_AS_UAV, forceStorageBufferAsUav));
-	    ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_NONWRITABLE_UAV_TEXTURE_AS_SRV, nonwritableUAVTextureAsSRV));
-	    ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_ENABLE_16BIT_TYPES, enable16bitTypes));
-	    ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_FLATTEN_MATRIX_VERTEX_INPUT_SEMANTICS, flattenMatrixVertexInputSemantics));
-    }
+		ctx.Throw(spvc_compiler_options_set_uint(options, Option.HLSL_SHADER_MODEL, shaderModel));
+		ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_POINT_SIZE_COMPAT, pointSizeCompat));
+		ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_POINT_COORD_COMPAT, pointCoordCompat));
+		ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_SUPPORT_NONZERO_BASE_VERTEX_BASE_INSTANCE, supportNonzeroBaseVertexBaseInstance));
+		ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_FORCE_STORAGE_BUFFER_AS_UAV, forceStorageBufferAsUav));
+		ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_NONWRITABLE_UAV_TEXTURE_AS_SRV, nonwritableUAVTextureAsSRV));
+		ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_ENABLE_16BIT_TYPES, enable16bitTypes));
+		ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_FLATTEN_MATRIX_VERTEX_INPUT_SEMANTICS, flattenMatrixVertexInputSemantics));
+		ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_USE_ENTRY_POINT_NAME, useEntryPointName));
+		ctx.Throw(spvc_compiler_options_set_bool(options, Option.HLSL_PRESERVE_STRUCTURED_BUFFERS, preserveStructuredBuffers));
+	}
 }

@@ -1,6 +1,6 @@
 # SPIRV-Cross.NET: cross-platform C# wrapper for SPIRV-Cross 
 
-A cross-platform .NET 8.0 wrapper for Microsoft's DirectX Shader Compiler, written in C#. 
+A cross-platform .NET 8.0 wrapper for Khronos Group's SPIR-V cross compiler, written in C#. 
 
 [![NuGet](https://img.shields.io/nuget/v/SPIRV-Cross.NET.svg)](https://www.nuget.org/packages/SPIRV-Cross.NET)
 

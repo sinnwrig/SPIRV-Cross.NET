@@ -21,10 +21,10 @@ public class Example
         // Console.WriteLine($"Compiling shader: \n\n\"\n{ShaderCode.HlslCode}\"\n");
         CompilationResult result = ShaderCompiler.Compile(ShaderCode.HlslCode, options, (x) => "");
 
-        if (result.compilationErrors != null)
+        foreach (var msg in result.messages)
         {
-            Console.WriteLine("Errors compiling shader:");
-            Console.WriteLine(result.compilationErrors);
+            Console.WriteLine($"{msg.severity} compiling shader:");
+            Console.WriteLine(msg.message);
             return;
         }
 

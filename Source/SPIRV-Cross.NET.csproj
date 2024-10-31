@@ -29,8 +29,8 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <WindowsX64BinPath>..\Native\lib\windows-x64\bin\*.dll</WindowsX64BinPath>
-        <WindowsArm64BinPath>..\Native\lib\windows-arm64\bin\*.dll</WindowsArm64BinPath>
+        <WindowsX64LibPath>..\Native\lib\windows-x64\bin\*.dll</WindowsX64LibPath>
+        <WindowsArm64LibPath>..\Native\lib\windows-arm64\bin\*.dll</WindowsArm64LibPath>
         <LinuxX64LibPath>..\Native\lib\linux-x64\lib\*.so</LinuxX64LibPath>
         <LinuxArm64LibPath>..\Native\lib\linux-arm64\lib\*.so</LinuxArm64LibPath>
         <MacosX64LibPath>..\Native\lib\macos-x64\lib\*.dylib</MacosX64LibPath>
@@ -51,43 +51,67 @@
         <Content Include="$(WindowsX64BinPath)">
             <Pack>true</Pack>
             <PackagePath>$(WindowsX64RuntimePath)</PackagePath>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>$(WindowsX64RuntimePath)\%(Filename)%(Extension)</Link>
         </Content>
     
         <Content Include="$(WindowsArm64BinPath)">
             <Pack>true</Pack>
             <PackagePath>$(WindowsArm64RuntimePath)</PackagePath>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>$(WindowsArm64RuntimePath)\%(Filename)%(Extension)</Link>
         </Content>
     
         <Content Include="$(LinuxX64LibPath)">
             <Pack>true</Pack>
             <PackagePath>$(LinuxX64RuntimePath)</PackagePath>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>$(LinuxX64RuntimePath)\%(Filename)%(Extension)</Link>
         </Content>
     
         <Content Include="$(LinuxArm64LibPath)">
             <Pack>true</Pack>
             <PackagePath>$(LinuxArm64RuntimePath)</PackagePath>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>$(LinuxArm64RuntimePath)\%(Filename)%(Extension)</Link>
         </Content>
   
         <Content Include="$(MacosX64LibPath)">
             <Pack>true</Pack>
             <PackagePath>$(MacosX64RuntimePath)</PackagePath>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>$(MacosX64RuntimePath)\%(Filename)%(Extension)</Link>
         </Content>
   
         <Content Include="$(MacosArm64LibPath)">
             <Pack>true</Pack>
             <PackagePath>$(MacosArm64RuntimePath)</PackagePath>
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>$(MacosArm64RuntimePath)\%(Filename)%(Extension)</Link>
         </Content>
-    </ItemGroup>
+    </ItemGroup>   
+
+    <ItemGroup Condition="$([MSBuild]::IsOsPlatform('Windows')) AND '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64' ">
+        <Content Include="$(WindowsX64LibPath)">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup> 
+
+    <ItemGroup Condition="$([MSBuild]::IsOsPlatform('Windows')) AND '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64' ">
+        <Content Include="$(WindowsArm64LibPath)">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup> 
+
+    <ItemGroup Condition="$([MSBuild]::IsOsPlatform('Linux')) AND '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64' ">
+        <Content Include="$(LinuxX64LibPath)">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup> 
+
+    <ItemGroup Condition="$([MSBuild]::IsOsPlatform('Linux')) AND '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64' ">
+        <Content Include="$(LinuxArm64LibPath)">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup> 
+
+    <ItemGroup Condition="$([MSBuild]::IsOsPlatform('OSX')) AND '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'X64' ">
+        <Content Include="$(MacosX64LibPath)">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup> 
+
+    <ItemGroup Condition="$([MSBuild]::IsOsPlatform('OSX')) AND '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64' ">
+        <Content Include="$(MacosArm64LibPath)">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup> 
 </Project>

@@ -33,7 +33,7 @@ public unsafe partial class HLSLCrossCompiler : Compiler
     public void SetRootConstantsLayout(RootConstants[] constantInfo)
     {
         Span<RootConstants> constants = constantInfo;
-        
+
         fixed (RootConstants* constantsPtr = &constants.GetPinnableReference())
             context.Throw(spvc_compiler_hlsl_set_root_constants_layout(compiler, constantsPtr, (nuint)constantInfo.Length));
     }
@@ -51,7 +51,7 @@ public unsafe partial class HLSLCrossCompiler : Compiler
 
             int len = System.Text.Encoding.UTF8.GetByteCount(remaps[i].semantic);
 
-            remapsPtr[i].semantic = (byte*)Marshal.AllocHGlobal(len);
+            remapsPtr[i].semantic = (byte*)NativeMemory.Alloc((nuint)len);
             Span<byte> nativeSemantic = new Span<byte>(remapsPtr[i].semantic, len);
 
             System.Text.Encoding.UTF8.GetBytes(remaps[i].semantic, nativeSemantic);
@@ -60,7 +60,7 @@ public unsafe partial class HLSLCrossCompiler : Compiler
         context.Throw(spvc_compiler_hlsl_add_vertex_attribute_remap(compiler, remapsPtr, (nuint)remaps.Length));
 
         for (int i = 0; i < remaps.Length; i++)
-            Marshal.FreeHGlobal((IntPtr)remapsPtr[i].semantic);
+            NativeMemory.Free(remapsPtr[i].semantic);
     }
 
     /// <summary>
